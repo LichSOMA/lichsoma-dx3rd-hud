@@ -1,0 +1,50 @@
+{
+  "id": "lichsoma-dx3rd-hud",
+  "title": "LichSOMA's DX3rd HUD",
+  "description": "A HUD module for DX3rd system.",
+  "version": "1.0.0",
+  "compatibility": {
+    "minimum": "13",
+    "verified": "13",
+    "maximum": "13"
+  },
+  "authors": [
+    {
+      "name": "LichSoma"
+    }
+  ],
+  "esmodules": [
+    "scripts/dx3rd-hud.js",
+    "scripts/dx3rd-sublimation-cut-in.js",
+    "scripts/dx3rd-combat-tracker.js"
+  ],
+  "styles": [
+    "styles/dx3rd-hud.css",
+    "styles/dx3rd-sublimation-cut-in.css",
+    "styles/dx3rd-player-hud.css",
+    "styles/dx3rd-enemy-hud.css",
+    "styles/dx3rd-combat-tracker.css"
+  ],
+  "languages": [
+    {
+      "lang": "ko",
+      "name": "한국어",
+      "path": "lang/ko.json"
+    }
+  ],
+  "relationships": {
+    "requires": [
+      {
+        "id": "double-cross-3rd",
+        "type": "system"
+      }
+    ],
+    "recommends": []
+  },
+  "socket": true,
+  "url": "",
+  "manifest": "",
+  "download": "",
+  "license": "",
+  "readme": ""
+}

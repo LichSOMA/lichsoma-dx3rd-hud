@@ -1,0 +1,361 @@
+/* Enemy HUD 스타일 */
+
+/* Enemy용 HUD 컨테이너 */
+#dx3rd-enemy-hud {
+  position: absolute;
+  top: 15px;
+  width: 750px;
+  height: 80px;
+  pointer-events: none;
+  z-index: 50;
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+  gap: 0px;
+  background: rgba(200, 30, 30, 0);
+  /* transition 제거 - 사이드바 크기 조절 시 즉시 반응 */
+}
+
+#dx3rd-enemy-hud.hidden {
+  display: none;
+}
+
+.dx3rd-hud-enemies-list {
+  display: flex;
+  flex-direction: column;
+  gap: 0px;
+  width: 100%;
+}
+
+.enemy-ui-row {
+  display: flex;
+  align-items: flex-start;
+  justify-content: flex-end;
+  margin-bottom: 32px;
+  transition: transform 0.5s ease, opacity 0.5s ease;
+}
+
+.enemy-ui-row.adding {
+  opacity: 0;
+  transform: translateX(50px);
+}
+
+.enemy-ui-row.added {
+  opacity: 1;
+  transform: translateX(0);
+}
+
+.enemy-ui-row.removing {
+  opacity: 0;
+  transform: translateX(50px);
+}
+
+.enemy-bars {
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+  order: 0;
+  align-items: flex-end;
+}
+
+.enemy-bar-hp {
+  position: relative;
+  left: 7px;
+  width: 560px;
+  height: 20px;
+  background: #333;
+  border: 2px solid #111;
+  transform: skewX(-20deg);
+  box-shadow: inset 0 0 6px rgba(0, 0, 0, 0.6), 0 0 4px rgba(0, 0, 0, 0.4);
+  overflow: hidden;
+}
+
+.enemy-hp-fill-container {
+  transform: skewX(20deg);
+  width: calc(100% + 6px);
+  height: 100%;
+  position: relative;
+  overflow: hidden;
+  top: 0;
+  right: 0;
+  left: -3px;
+}
+
+.enemy-hp-fill {
+  height: 100%;
+  width: 100%;
+  position: absolute;
+  top: 0;
+  left: auto;
+  right: 0;
+  box-shadow: inset 0 0 6px rgba(0, 0, 0, 0.6), 0 0 4px rgba(0, 0, 0, 0.4);
+  transform: none;
+  transition: width 0.3s ease-in-out, background 0.3s ease-in-out !important;
+}
+
+.enemy-bar-enc {
+  position: relative;
+  width: 420px;
+  height: 16px;
+  background: #333;
+  border: 2px solid #111;
+  transform: skewX(-20deg);
+  box-shadow: inset 0 0 6px rgba(0, 0, 0, 0.6), 0 0 4px rgba(0, 0, 0, 0.4);
+  overflow: hidden;
+  align-self: flex-end;
+}
+
+.enemy-enc-fill-container {
+  transform: skewX(20deg);
+  width: calc(100% + 6px);
+  height: 100%;
+  position: relative;
+  overflow: hidden;
+  top: 0;
+  right: 0;
+  left: -3px;
+}
+
+.enemy-enc-fill-1,
+.enemy-enc-fill-2,
+.enemy-enc-fill-3 {
+  position: absolute;
+  top: 0;
+  left: auto;
+  right: 0;
+  height: 100%;
+  width: 0%;
+  transition: width 0.3s ease-in-out !important;
+}
+
+/* Segment colors */
+.enemy-enc-fill-1 {
+  background: #4bbef0;
+  box-shadow: inset 0 0 6px rgba(0, 0, 0, 0.6), 0 0 4px rgba(0, 0, 0, 0.4);
+  z-index: 1;
+}
+
+.enemy-enc-fill-2 {
+  background: #7e0017;
+  box-shadow: inset 0 0 6px rgba(0, 0, 0, 0.6), 0 0 4px rgba(0, 0, 0, 0.4);
+  z-index: 2;
+}
+
+.enemy-enc-fill-3 {
+  background: #220006;
+  box-shadow: inset 0 0 6px rgba(0, 0, 0, 0.6), 0 0 4px rgba(0, 0, 0, 0.4);
+  z-index: 3;
+}
+
+.enemy-condition-container {
+  display: flex;
+  gap: 4px;
+  margin-right: 10px;
+}
+
+/* 상태이상 아이콘 박스 */
+.enemy-condition-icon-box {
+  width: 30px;
+  height: 30px;
+  transform: skewX(-20deg);
+  border: 1px solid #111;
+  box-shadow: inset 0 0 6px rgba(0, 0, 0, 0.6), 0 0 4px rgba(0, 0, 0, 0.4);
+  background: rgb(85, 85, 85);
+  pointer-events: auto;
+  cursor: default;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  overflow: hidden;
+}
+
+.enemy-condition-icon-box img {
+  width: 100%;
+  height: 100%;
+  object-fit: contain;
+  transform: skewX(20deg);
+  pointer-events: none;
+}
+
+.enemy-ui-icon {
+  pointer-events: auto;
+  cursor: pointer;
+}
+
+.enemy-ui-icon-wrapper {
+  position: relative;
+  overflow: visible;
+}
+
+.enemy-ui-icon-frame {
+  width: 180px;
+  height: 72px;
+  overflow: hidden;
+  transform: skewX(-20deg);
+  transform-origin: right;
+  border: 2px solid #111;
+  background-color: rgba(128, 128, 128, 0.75);
+  position: relative;
+}
+
+.enemy-ui-actor-name {
+  position: absolute;
+  bottom: -18px;
+  right: -20px;
+  z-index: 2;
+  font-family: Arial, sans-serif;
+  font-weight: bold;
+  font-size: 24px;
+  color: rgb(255, 255, 255);
+  transform: skewX(20deg);
+  transform: rotate(-10deg);
+  text-shadow: -1px 0px black, 0px 1px black, 1px 0px black, 0px -1px black;
+  pointer-events: none;
+}
+
+
+.enemy-ui-icon-wrapper .enemy-ui-icon {
+  width: 120%;
+  border: none;
+  object-fit: contain;
+  transform: skewX(20deg);
+  transform-origin: left;
+  max-width: 120%;
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  transform: skewX(20deg) translate(-50%, -50%);
+  background-color: rgba(128, 128, 128, 0.5);
+}
+
+/* Actor 이미지와 HUD 이미지 위치는 JavaScript에서 설정 */
+
+.enemy-ui-row.small {
+  transform: scale(0.7);
+  transform-origin: top right;
+  margin-bottom: 0px;
+  transition: transform 0.5s ease, opacity 0.5s ease;
+}
+
+.enemy-ui-row.small.adding {
+  opacity: 0;
+  transform: translateX(50px) scale(0.7);
+}
+
+.enemy-ui-row.small.added {
+  opacity: 1;
+  transform: translateX(0) scale(0.7);
+}
+
+.enemy-ui-row.small.removing {
+  opacity: 0;
+  transform: translateX(50px) scale(0.7);
+}
+
+/* HP 바 (스몰 버전) */
+.enemy-bar-hp.small {
+  width: 200px !important;
+}
+
+.enemy-bar-hp.small .fill-container {
+  width: 200px !important;
+}
+
+/* ENC 바 (스몰 버전) */
+.enemy-bar-enc.small {
+  width: 160px !important;
+}
+
+.enemy-bar-enc.small .fill-container {
+  width: 160px !important;
+}
+
+.enemy-ui-actor-name.small {
+  bottom: -15px;
+  right: -20px;
+  font-size: 25px;
+}
+
+/* HP바 텍스트 */
+.enemy-bar-hp-text {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  transform: skewX(20deg) translate(-50%, -50%);
+  font-family: Arial, sans-serif;
+  font-weight: bold;
+  font-size: 14px;
+  color: white;
+  text-shadow: -1px 0px black, 0px 1px black, 1px 0px black, 0px -1px black;
+  pointer-events: none;
+  z-index: 10;
+}
+
+/* 침식률바 텍스트 */
+.enemy-bar-enc-text {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  transform: skewX(20deg) translate(-50%, -50%);
+  font-family: Arial, sans-serif;
+  font-weight: bold;
+  font-size: 12px;
+  color: white;
+  text-shadow: -1px 0px black, 0px 1px black, 1px 0px black, 0px -1px black;
+  pointer-events: none;
+  z-index: 10;
+}
+
+/* 편집 가능한 값 스타일 */
+.enemy-bar-hp-text .editable-value,
+.enemy-bar-enc-text .editable-value {
+  pointer-events: auto;
+  cursor: default;
+  transition: color 0.2s;
+}
+
+/* 권한이 있는 경우 호버 효과 */
+.enemy-bar-hp.has-permission .editable-value:hover,
+.enemy-bar-enc.has-permission .editable-value:hover,
+.enemy-bar-hp-text.has-permission .editable-value:hover,
+.enemy-bar-enc-text.has-permission .editable-value:hover {
+  color: #ffbb00;
+  cursor: pointer;
+}
+
+/* 권한이 있는 이름 호버 효과 */
+.enemy-ui-actor-name.has-permission {
+  pointer-events: auto;
+  cursor: pointer;
+  transition: color 0.2s, text-shadow 0.2s;
+}
+
+.enemy-ui-actor-name.has-permission:hover {
+  color: #ffbb00;
+  text-shadow: -1px 0px black, 0px 1px black, 1px 0px black, 0px -1px black,
+               0 0 10px rgba(255, 187, 0, 0.8);
+}
+
+/* HP/침식률 편집용 Input */
+.enemy-bar-hp-input,
+.enemy-bar-enc-input {
+  width: 60px;
+  height: 16px;
+  font-size: 12px;
+  text-align: center;
+  border: none;
+  background: none;
+  color: white;
+  font-family: Arial, sans-serif;
+  font-weight: bold;
+  padding: 0;
+  margin: 0;
+  pointer-events: auto;
+  position: relative;
+  z-index: 20;
+}
+
+/* 숨겨진 토큰 (GM만 투명도로 표시) */
+.enemy-ui-row.hidden-token {
+  opacity: 0.5;
+}

@@ -1,0 +1,331 @@
+/**
+ * DX3rd Carousel Combat Tracker Styles
+ * Carousel 스타일의 전투 추적기 스타일시트
+ */
+
+.dx3rd-combat-tracker {
+  position: absolute;
+  bottom: 60px; /* 기본값: JavaScript에서 핫바 높이에 따라 동적으로 설정됨 */
+  left: 50%;
+  transform: translateX(-50%);
+  /* width는 JavaScript에서 카드 수에 따라 동적으로 설정됨 */
+  height: 110px; /* 라운드 표시 공간 추가 */
+  background-color: rgba(150, 150, 150, 0);
+  border: 2px solid rgba(0, 255, 64, 0);
+  border-radius: 0px;
+  padding: 5px;
+  z-index: 100;
+  pointer-events: none;
+  overflow: hidden;
+}
+
+.combat-tracker-content {
+  width: 100%;
+  height: 100%;
+  display: flex;
+  flex-direction: column;
+  justify-content: flex-end;
+  align-items: center;
+  padding-bottom: 5px;
+}
+
+.combat-ready-wrapper {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  pointer-events: auto;
+  cursor: pointer;
+  transition: opacity 0.2s;
+}
+
+.combat-ready-icon {
+  color: rgba(255, 255, 255, 0.9);
+  font-size: 48px;
+  margin-bottom: 8px;
+  transition: color 0.2s;
+  text-shadow: 
+  0 0 3px rgba(0, 0, 0, 0.9),
+  0 0 6px rgba(0, 0, 0, 0.7),
+  0 1px 2px rgba(0, 0, 0, 0.8),
+  1px 1px 2px rgba(0, 0, 0, 0.6),
+  -1px -1px 2px rgba(0, 0, 0, 0.6);
+}
+
+.combat-ready-message {
+  color: rgba(255, 255, 255, 0.9);
+  font-size: 16px;
+  font-weight: bold;
+  text-align: center;
+  transition: color 0.2s;
+  text-shadow: 
+  0 0 3px rgba(0, 0, 0, 0.9),
+  0 0 6px rgba(0, 0, 0, 0.7),
+  0 1px 2px rgba(0, 0, 0, 0.8),
+  1px 1px 2px rgba(0, 0, 0, 0.6),
+  -1px -1px 2px rgba(0, 0, 0, 0.6);
+}
+
+.combat-ready-wrapper:hover .combat-ready-icon,
+.combat-ready-wrapper:hover .combat-ready-message {
+  color: #ffbb00;
+}
+
+/* 라운드 표시 */
+.combat-round-display {
+  position: absolute;
+  top: 2px;
+  left: 50%;
+  transform: translateX(-50%);
+  color: rgba(255, 255, 255, 0.9);
+  font-size: 12px;
+  font-weight: bold;
+  text-align: center;
+  z-index: 5;
+  text-shadow: 
+    0 0 3px rgba(0, 0, 0, 0.9),
+    0 0 6px rgba(0, 0, 0, 0.7),
+    0 1px 2px rgba(0, 0, 0, 0.8),
+    1px 1px 2px rgba(0, 0, 0, 0.6),
+    -1px -1px 2px rgba(0, 0, 0, 0.6);
+  pointer-events: none;
+  padding: 2px 10px;
+  user-select: none;
+}
+
+/* Carousel 스타일 */
+.combat-tracker-carousel {
+  width: 100%;
+  height: calc(100% - 15px); /* 라운드 표시 공간 제외 */
+  margin-top: 15px;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  gap: 5px;
+  pointer-events: none;
+}
+
+.carousel-card {
+  height: 80px; /* 높이 줄임 */
+  width: calc(80px * 2.5 / 3); /* 2.5:3 비율로 너비 계산 */
+  display: flex;
+  flex-direction: column;
+  transition: opacity 0.3s ease, transform 0.3s ease;
+  position: relative;
+  cursor: pointer;
+  pointer-events: auto;
+}
+
+.carousel-card[data-offset="0"] {
+  transform: scale(1);
+}
+
+.carousel-card[data-offset="-1"],
+.carousel-card[data-offset="1"] {
+  transform: scale(0.95);
+}
+
+.carousel-card[data-offset="-2"],
+.carousel-card[data-offset="2"] {
+  transform: scale(0.9);
+}
+
+.carousel-card[data-offset="-3"],
+.carousel-card[data-offset="3"] {
+  transform: scale(0.85);
+}
+
+.carousel-card[data-offset="-4"],
+.carousel-card[data-offset="4"] {
+  transform: scale(0.8);
+}
+
+.card-image-container {
+  width: 100%;
+  height: calc(80px * 0.85); /* 이미지 영역: 전체 높이의 85% */
+  overflow: hidden;
+  border: 1px solid rgba(255, 255, 255, 0.3);
+  background-color: rgba(0, 0, 0, 0.5);
+  position: relative;
+  pointer-events: auto;
+}
+
+.card-image-container img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  object-position: center center;
+  display: block;
+}
+
+.card-name {
+  width: 100%;
+  height: calc(80px * 0.15); /* 이름 영역: 전체 높이의 15% */
+  font-size: 8px;
+  color: rgba(255, 255, 255, 0.9);
+  text-align: center;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  padding: 0 2px;
+  background-color: rgba(0, 0, 0, 0.3);
+}
+
+/* 컨트롤 버튼 */
+.combat-control-btn {
+  position: absolute;
+  width: 24px;
+  height: 24px;
+  background: none;
+  border: none;
+  color: rgba(255, 255, 255, 0.8);
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 20px;
+  transition: all 0.2s;
+  z-index: 10;
+  text-shadow: 0 1px 2px rgba(0, 0, 0, 0.8);
+  outline: none;
+  pointer-events: auto;
+}
+
+.combat-control-btn:hover {
+  color: #ffbb00;
+}
+
+.combat-control-btn:focus {
+  outline: none;
+}
+
+.prev-turn-btn {
+  bottom: 5px;
+  left: 5px;
+}
+
+.next-turn-btn {
+  bottom: 5px;
+  right: 5px;
+}
+
+.end-combat-btn {
+  top: 15px;
+  right: 5px;
+  color: rgba(255, 255, 255, 0.2);
+  text-shadow: none;
+  font-size: 14px;
+}
+
+.end-combat-btn:hover {
+  color: #f44336;
+}
+
+.delete-combat-btn {
+  top: 15px;
+  right: 5px;
+  color: rgba(255, 255, 255, 0.2);
+  text-shadow: none;
+  font-size: 14px;
+}
+
+.delete-combat-btn:hover {
+  color: #f44336;
+}
+
+/* 전투 종료 확인 다이얼로그 */
+.combat-end-dialog-overlay {
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  background: rgba(0, 0, 0, 0.5);
+  z-index: 10000;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.combat-end-dialog-box {
+  background: #1e1e1e;
+  border: 2px solid #4a4a4a;
+  border-radius: 5px;
+  padding: 20px;
+  min-width: 300px;
+  box-shadow: 0 0 20px rgba(0, 0, 0, 0.5);
+}
+
+.combat-end-dialog-message {
+  margin: 0 0 20px 0;
+  color: #ccc;
+  text-align: center;
+}
+
+.combat-end-dialog-buttons {
+  display: flex;
+  gap: 10px;
+  justify-content: center;
+}
+
+.combat-end-dialog-button {
+  padding: 8px 16px;
+  background: #666;
+  color: white;
+  border: none;
+  border-radius: 3px;
+  cursor: pointer;
+  min-width: 80px;
+  transition: background 0.2s;
+}
+
+.combat-end-dialog-button:hover {
+  background: #777;
+}
+
+.combat-end-dialog-button:active {
+  background: #555;
+}
+
+/* 컴배턴트 컨텍스트 메뉴 */
+.dx3rd-combatant-context-menu {
+  position: fixed;
+  background: rgba(20, 20, 20, 0.95);
+  border: 1px solid rgba(255, 255, 255, 0.2);
+  border-radius: 4px;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.5);
+  z-index: 10001;
+  min-width: 180px;
+  padding: 4px 0;
+  pointer-events: auto;
+}
+
+.dx3rd-combatant-context-menu .context-menu-item {
+  display: flex;
+  align-items: center;
+  padding: 8px 12px;
+  color: rgba(255, 255, 255, 0.9);
+  cursor: pointer;
+  font-size: 13px;
+  transition: background-color 0.15s, color 0.15s;
+  gap: 8px;
+}
+
+.dx3rd-combatant-context-menu .context-menu-item:hover {
+  background-color: rgba(255, 255, 255, 0.1);
+  color: #ffbb00;
+}
+
+.dx3rd-combatant-context-menu .context-menu-item i {
+  width: 16px;
+  text-align: center;
+  font-size: 14px;
+}
+
+.dx3rd-combatant-context-menu .context-menu-item[data-action="remove-combatant"]:hover {
+  background-color: rgba(244, 67, 54, 0.2);
+  color: #f44336;
+}
+

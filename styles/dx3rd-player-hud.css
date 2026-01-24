@@ -1,0 +1,420 @@
+/* Player HUD 스타일 */
+
+/* PC용 HUD 컨테이너 */
+#dx3rd-player-hud {
+  position: absolute;
+  bottom: 10px;
+  left: 30px;
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  justify-content: flex-end;
+  gap: 5px;
+  pointer-events: none;
+  z-index: 50;
+  background: rgba(30, 60, 200, 0);
+}
+
+#dx3rd-player-hud.hidden {
+  display: none;
+}
+
+#dx3rd-player-hud.hidden .dx3rd-hud-toggle-ally-btn {
+  display: none;
+}
+
+/* 조력자 토글 버튼 */
+.dx3rd-hud-toggle-ally-btn {
+  position: relative;
+  width: 24px;
+  height: 24px;
+  background: none;
+  border: none;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  pointer-events: auto;
+  transition: all 0.3s ease;
+  color: #666;
+  text-shadow: 
+  0 0 3px rgba(0, 0, 0, 0.9),
+  0 0 6px rgba(0, 0, 0, 0.7),
+  0 1px 2px rgba(0, 0, 0, 0.8),
+  1px 1px 2px rgba(0, 0, 0, 0.6),
+  -1px -1px 2px rgba(0, 0, 0, 0.6);
+  font-size: 14px;
+  z-index: 100;
+  opacity: 0.1;
+  margin-bottom: 0px;
+}
+
+.dx3rd-hud-toggle-ally-btn:hover {
+  color: #ffbb00;
+  opacity: 0.75;
+}
+
+.dx3rd-hud-toggle-ally-btn.inactive {
+  color: #666;
+  opacity: 0.2;
+}
+
+.dx3rd-hud-toggle-ally-btn.inactive:hover {
+  color: #ffbb00;
+  opacity: 0.75;
+}
+
+.dx3rd-hud-players-list {
+  display: flex;
+  flex-direction: column;
+  gap: 5px;
+  width: 100%;
+}
+
+.pc-ui-row {
+  display: flex;
+  align-items: flex-start;
+  justify-content: flex-start;
+  margin-top: 20px;
+  transition: transform 0.5s ease, opacity 0.5s ease;
+}
+
+.pc-ui-row.adding {
+  opacity: 0;
+  transform: translateX(-50px);
+}
+
+.pc-ui-row.added {
+  opacity: 1;
+  transform: translateX(0);
+}
+
+.pc-ui-row.removing {
+  opacity: 0;
+  transform: translateX(-50px);
+}
+
+/* 조력자 숨김 상태 */
+.pc-ui-row.ally-hidden {
+  display: none;
+}
+
+.pc-bars {
+  display: flex;
+  flex-direction: column;
+  margin-left: 5px;
+  gap: 3px;
+  order: 0;
+  align-items: flex-start;
+}
+
+.pc-bar-hp {
+  position: relative;
+  left: 7px;
+  width: 240px;
+  height: 20px;
+  background: #333;
+  border: 2px solid #111;
+  transform: skewX(-20deg);
+  box-shadow: inset 0 0 6px rgba(0, 0, 0, 0.6), 0 0 4px rgba(0, 0, 0, 0.4);
+  overflow: hidden;
+}
+
+.pc-hp-fill-container {
+  transform: skewX(20deg);
+  width: calc(100% + 6px);
+  height: 100%;
+  position: relative;
+  overflow: hidden;
+  top: 0;
+  left: -3px;
+  right: 0;
+}
+
+.pc-hp-fill {
+  height: 100%;
+  width: 100%;
+  position: absolute;
+  top: 0;
+  right: auto;
+  left: 0;
+  box-shadow: inset 0 0 6px rgba(0, 0, 0, 0.6), 0 0 4px rgba(0, 0, 0, 0.4);
+  transform: none;
+  transition: width 0.3s ease-in-out, background 0.3s ease-in-out !important;
+}
+
+.pc-bar-enc {
+  position: relative;
+  width: 180px;
+  height: 16px;
+  background: #333;
+  border: 2px solid #111;
+  transform: skewX(-20deg);
+  box-shadow: inset 0 0 6px rgba(0, 0, 0, 0.6), 0 0 4px rgba(0, 0, 0, 0.4);
+  overflow: hidden;
+  align-self: flex-start;
+}
+
+.pc-enc-fill-container {
+  transform: skewX(20deg);
+  width: calc(100% + 6px);
+  height: 100%;
+  position: relative;
+  overflow: hidden;
+  top: 0;
+  right: 0;
+  left: -3px;
+}
+
+.pc-enc-fill-1,
+.pc-enc-fill-2,
+.pc-enc-fill-3 {
+  position: absolute;
+  top: 0;
+  right: auto;
+  left: 0;
+  height: 100%;
+  width: 0%;
+  transition: width 0.3s ease-in-out !important;
+}
+
+/* Segment colors */
+.pc-enc-fill-1 {
+  background: #4bbef0;
+  box-shadow: inset 0 0 6px rgba(0, 0, 0, 0.6), 0 0 4px rgba(0, 0, 0, 0.4);
+  z-index: 1;
+}
+
+.pc-enc-fill-2 {
+  background: #7e0017;
+  box-shadow: inset 0 0 6px rgba(0, 0, 0, 0.6), 0 0 4px rgba(0, 0, 0, 0.4);
+  z-index: 2;
+}
+
+.pc-enc-fill-3 {
+  background: #220006;
+  box-shadow: inset 0 0 6px rgba(0, 0, 0, 0.6), 0 0 4px rgba(0, 0, 0, 0.4);
+  z-index: 3;
+}
+
+.pc-condition-container {
+  display: flex;
+  gap: 2px;
+  margin-left: -8px;
+}
+
+/* 상태이상 아이콘 박스 */
+.pc-condition-icon-box {
+  width: 30px;
+  height: 30px;
+  transform: skewX(-20deg);
+  border: 1px solid #111;
+  box-shadow: inset 0 0 6px rgba(0, 0, 0, 0.6), 0 0 4px rgba(0, 0, 0, 0.4);
+  background: rgb(85, 85, 85);
+  pointer-events: auto;
+  cursor: default;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  overflow: hidden;
+}
+
+.pc-condition-icon-box img {
+  width: 100%;
+  height: 100%;
+  object-fit: contain;
+  transform: skewX(20deg);
+  pointer-events: none;
+}
+
+.pc-ui-icon {
+  pointer-events: auto;
+  cursor: pointer;
+}
+
+.pc-ui-icon-wrapper {
+  position: relative;
+  overflow: visible;
+}
+
+.pc-ui-icon-frame {
+  width: 180px;
+  height: 72px;
+  overflow: hidden;
+  transform: skewX(-20deg);
+  transform-origin: right;
+  border: 2px solid #111;
+  background-color: rgba(128, 128, 128, 0.75);
+  position: relative;
+}
+
+.pc-ui-actor-name {
+  position: absolute;
+  top: -10px;
+  left: -15px;
+  z-index: 2;
+  font-family: Arial, sans-serif;
+  font-weight: bold;
+  font-size: 20px;
+  color: rgb(255, 255, 255);
+  transform: skewX(20deg);
+  transform: rotate(-10deg);
+  text-shadow: -1px 0px black, 0px 1px black, 1px 0px black, 0px -1px black;
+  pointer-events: none;
+  filter: none;
+}
+
+
+.pc-ui-icon-wrapper .pc-ui-icon {
+  width: 120%;
+  border: none;
+  object-fit: contain;
+  transform: skewX(20deg);
+  transform-origin: left;
+  max-width: 120%;
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  transform: skewX(20deg) translate(-50%, -50%);
+  background-color: rgba(128, 128, 128, 0.5);
+}
+
+/* Actor 이미지와 HUD 이미지 위치는 JavaScript에서 설정 */
+
+.blood-overlay {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  border: none;
+  pointer-events: none;
+  z-index: 1;
+  transition: opacity 0.8s ease;
+}
+
+.pc-ui-row.small {
+  transform: scale(0.7);
+  transform-origin: bottom left;
+  margin-top: -10px;
+  transition: transform 0.5s ease, opacity 0.5s ease;
+}
+
+.pc-ui-row.small.adding {
+  opacity: 0;
+  transform: translateX(-50px) scale(0.7);
+}
+
+.pc-ui-row.small.added {
+  opacity: 1;
+  transform: translateX(0) scale(0.7);
+}
+
+.pc-ui-row.small.removing {
+  opacity: 0;
+  transform: translateX(-50px) scale(0.7);
+}
+
+/* HP 바 (스몰 버전) */
+.pc-bar-hp.small {
+  width: 200px !important;
+}
+
+.pc-bar-hp.small .fill-container {
+  width: 200px !important;
+}
+
+/* ENC 바 (스몰 버전) */
+.pc-bar-enc.small {
+  width: 160px !important;
+}
+
+.pc-bar-enc.small .fill-container {
+  width: 160px !important;
+}
+
+.pc-ui-actor-name.small {
+  top: -15px;
+  left: -15px;
+  font-size: 25px;
+}
+
+/* HP바 텍스트 */
+.pc-bar-hp-text {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  transform: skewX(20deg) translate(-50%, -50%);
+  font-family: Arial, sans-serif;
+  font-weight: bold;
+  font-size: 14px;
+  color: white;
+  text-shadow: -1px 0px black, 0px 1px black, 1px 0px black, 0px -1px black;
+  pointer-events: none;
+  z-index: 10;
+}
+
+/* 침식률바 텍스트 */
+.pc-bar-enc-text {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  transform: skewX(20deg) translate(-50%, -50%);
+  font-family: Arial, sans-serif;
+  font-weight: bold;
+  font-size: 12px;
+  color: white;
+  text-shadow: -1px 0px black, 0px 1px black, 1px 0px black, 0px -1px black;
+  pointer-events: none;
+  z-index: 10;
+}
+
+/* 편집 가능한 값 스타일 */
+.pc-bar-hp-text .editable-value,
+.pc-bar-enc-text .editable-value {
+  pointer-events: auto;
+  cursor: default;
+  transition: color 0.2s;
+}
+
+/* 권한이 있는 경우 호버 효과 */
+.pc-bar-hp.has-permission .editable-value:hover,
+.pc-bar-enc.has-permission .editable-value:hover,
+.pc-bar-hp-text.has-permission .editable-value:hover,
+.pc-bar-enc-text.has-permission .editable-value:hover {
+  color: #ffbb00;
+  cursor: pointer;
+}
+
+/* 권한이 있는 이름 호버 효과 */
+.pc-ui-actor-name.has-permission {
+  pointer-events: auto;
+  cursor: pointer;
+  transition: color 0.2s, text-shadow 0.2s;
+}
+
+.pc-ui-actor-name.has-permission:hover {
+  color: #ffbb00;
+  text-shadow: -1px 0px black, 0px 1px black, 1px 0px black, 0px -1px black,
+               0 0 10px rgba(255, 187, 0, 0.8);
+}
+
+/* HP/침식률 편집용 Input */
+.pc-bar-hp-input,
+.pc-bar-enc-input {
+  width: 60px;
+  height: 16px;
+  font-size: 12px;
+  text-align: center;
+  border: none;
+  background: none;
+  color: white;
+  font-family: Arial, sans-serif;
+  font-weight: bold;
+  padding: 0;
+  margin: 0;
+  pointer-events: auto;
+  position: relative;
+  z-index: 20;
+}
+
