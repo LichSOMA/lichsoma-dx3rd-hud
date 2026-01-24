@@ -272,6 +272,11 @@ Hooks.on('updateCombat', (combat, changed, options, userId) => {
     updateEnemyHUD();
   }
   
+  // 턴 변경 감지
+  if (changed.turn !== undefined || changed.combatantId !== undefined) {
+    updateCurrentTurnHighlight();
+  }
+  
   // 전투 시작 감지 (라운드가 0에서 1로 변경되거나 started 플래그가 true로 변경될 때)
   const roundChanged = changed.round !== undefined && changed.round > 0;
   const startedChanged = changed.started !== undefined && changed.started === true;
@@ -1029,6 +1034,14 @@ function buildPCHUDRow(token) {
   wrapper.dataset.tokenId = token.id;
   wrapper.dataset.actorType = token.actor.system.actorType;
   
+  // 현재 턴 확인
+  if (game.combat && game.combat.started) {
+    const currentCombatant = game.combat.combatant;
+    if (currentCombatant && currentCombatant.token?.id === token.id) {
+      wrapper.classList.add("current-turn");
+    }
+  }
+  
   wrapper.innerHTML = `
     <div class="pc-ui-icon-wrapper">
       <div class="pc-ui-icon-frame">
@@ -1425,6 +1438,14 @@ function buildEnemyHUDRow(token) {
   const wrapper = document.createElement("div");
   wrapper.classList.add("enemy-ui-row");
   wrapper.dataset.tokenId = token.id;
+  
+  // 현재 턴 확인
+  if (game.combat && game.combat.started) {
+    const currentCombatant = game.combat.combatant;
+    if (currentCombatant && currentCombatant.token?.id === token.id) {
+      wrapper.classList.add("current-turn");
+    }
+  }
   
   wrapper.innerHTML = `
     <div class="enemy-bars">
@@ -2529,4 +2550,43 @@ function startEditingEncroachment(editableSpan, actor) {
   editableSpan.parentElement.insertBefore(input, editableSpan);
   input.focus();
   input.select();
+}
+
+/**
+ * 현재 턴 액터의 HUD Row에 하이라이트 적용
+ */
+function updateCurrentTurnHighlight() {
+  // 모든 Player HUD Row에서 current-turn 클래스 제거
+  const playerRows = document.querySelectorAll('#dx3rd-hud-players-list .pc-ui-row');
+  playerRows.forEach(row => row.classList.remove('current-turn'));
+  
+  // 모든 Enemy HUD Row에서 current-turn 클래스 제거
+  const enemyRows = document.querySelectorAll('#dx3rd-hud-enemies-list .enemy-ui-row');
+  enemyRows.forEach(row => row.classList.remove('current-turn'));
+  
+  // 전투가 진행 중인지 확인
+  if (!game.combat || !game.combat.started) return;
+  
+  // 현재 턴의 combatant 가져오기
+  const currentCombatant = game.combat.combatant;
+  if (!currentCombatant || !currentCombatant.token) return;
+  
+  // 프로세스 combatant 제외
+  const isProcess = currentCombatant.getFlag('double-cross-3rd', 'isProcessCombatant');
+  if (isProcess) return;
+  
+  // 현재 턴 토큰의 ID
+  const currentTokenId = currentCombatant.token.id;
+  
+  // Player HUD에서 해당 토큰의 Row 찾기
+  const playerRow = document.querySelector(`#dx3rd-hud-players-list .pc-ui-row[data-token-id="${currentTokenId}"]`);
+  if (playerRow) {
+    playerRow.classList.add('current-turn');
+  }
+  
+  // Enemy HUD에서 해당 토큰의 Row 찾기
+  const enemyRow = document.querySelector(`#dx3rd-hud-enemies-list .enemy-ui-row[data-token-id="${currentTokenId}"]`);
+  if (enemyRow) {
+    enemyRow.classList.add('current-turn');
+  }
 }
