@@ -54,13 +54,28 @@
   "DX3rdHUD.Carousel.HorizontalOffset": "전투 추적기 좌우 위치",
   "DX3rdHUD.Carousel.HorizontalOffsetHint": "전투 추적기를 좌우로 이동시킵니다. (-500 ~ +500, 기본값: 0)",
   
-  "DX3rdHUD.TurnNotificationSound": "턴 알림 사운드",
+  "DX3rdHUD.TurnNotificationSound": "턴 경고 사운드",
   "DX3rdHUD.TurnNotificationSoundHint": "GM이 전투 추적기에서 현재 턴 액터를 더블클릭할 때, 해당 액터의 소유자에게 재생될 사운드입니다.",
   
-  "DX3rdHUD.EnableInactivityMonitoring": "플레이어 휴면 상태 감시",
-  "DX3rdHUD.EnableInactivityMonitoringHint": "현재 턴 플레이어가 15초 동안 마우스/키보드 활동이 없을 경우 GM에게 알림을 표시합니다.",
+  "DX3rdHUD.TurnNotificationSoundVolume": "턴 경고 사운드 볼륨",
+  "DX3rdHUD.TurnNotificationSoundVolumeHint": "턴 경고 사운드의 볼륨을 조절합니다. (0.0 = 무음, 1.0 = 기본, 2.0 = 최대)",
   
-  "DX3rdHUD.PlayerInactiveWarning": "⚠️ {userName}({actorName})님이 휴면 상태입니다",
+  "DX3rdHUD.TurnNotificationMessage": "턴 경고 메시지",
+  "DX3rdHUD.TurnNotificationMessageHint": "GM이 전투 추적기에서 현재 턴 액터를 더블클릭할 때, 해당 액터의 소유자 화면 중앙에 표시할 메시지입니다. 비워두면 메시지를 표시하지 않습니다.",
+  
+  "DX3rdHUD.TurnNotificationMessageFontSize": "턴 경고 메시지 폰트 크기",
+  "DX3rdHUD.TurnNotificationMessageFontSizeHint": "턴 경고 메시지의 폰트 크기를 조절합니다. (25 ~ 75, 기본값: 50)",
+  
+  "DX3rdHUD.EnableInactivityMonitoring": "플레이어 휴면 상태 감시",
+  "DX3rdHUD.EnableInactivityMonitoringHint": "현재 턴 플레이어가 설정된 시간 동안 마우스/키보드 활동이 없을 경우 GM에게 알림을 표시합니다.",
+  
+  "DX3rdHUD.InactivityMonitoringTimeout": "휴면 상태 감지 시간",
+  "DX3rdHUD.InactivityMonitoringTimeoutHint": "플레이어를 휴면 상태로 판단하기까지의 시간(초)입니다. (5 ~ 30초, 기본값: 15초)",
+  
+  "DX3rdHUD.EnableGMFocusMode": "GM 집중 모드",
+  "DX3rdHUD.EnableGMFocusModeHint": "GM이 휴면 상태 감지 시간 동안 활동하지 않을 경우 GM 자신에게도 턴 경고를 표시합니다.",
+  
+  "DX3rdHUD.PlayerInactiveWarning": "⚠️ {userName}({actorName})님이 휴면 상태입니다 ⚠️",
   
   "DX3rdHUD.HUDNameFont": "HUD 이름 폰트",
   "DX3rdHUD.HUDNameFontHint": "플레이어 HUD의 캐릭터 이름에 사용할 폰트를 선택하세요.",

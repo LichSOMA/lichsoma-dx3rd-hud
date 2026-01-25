@@ -240,13 +240,20 @@ Hooks.once('ready', () => {
       // 턴 알림 사운드 재생 (GM 제외, 자신의 ID와 일치하는 경우만)
       if (!game.user.isGM && data.userId === game.user.id) {
         const soundPath = game.settings.get(MODULE_ID, "turnNotificationSound");
+        const soundVolume = game.settings.get(MODULE_ID, "turnNotificationSoundVolume");
         if (soundPath) {
           AudioHelper.play({
             src: soundPath,
-            volume: 0.8,
+            volume: soundVolume,
             autoplay: true,
             loop: false
           }, false);
+        }
+        
+        // 메시지가 설정되어 있으면 화면에 표시
+        const message = data.message;
+        if (message && message.trim() !== "") {
+          showTurnNotificationMessage(message);
         }
       }
     } else if (data.type === 'playerInactive' && game.user.isGM) {
@@ -260,6 +267,11 @@ Hooks.once('ready', () => {
   
   // 마우스 활동 추적 시작
   startMouseActivityTracking();
+  
+  // GM용 휴면 감지 시작
+  if (game.user.isGM) {
+    startGMInactivityMonitoring();
+  }
   
   // 이벤트 위임 방식으로 버튼 클릭 감지
   document.body.addEventListener('click', (e) => {
@@ -832,10 +844,14 @@ function addCardClickEvents(container) {
       
       // 소유자가 있으면 각 소유자에게 사운드 알림 전송
       if (ownerUsers.length > 0) {
+        // 메시지 설정 가져오기
+        const notificationMessage = game.settings.get(MODULE_ID, "turnNotificationMessage");
+        
         ownerUsers.forEach(user => {
           game.socket.emit(`module.${MODULE_ID}`, {
             type: 'playTurnNotification',
-            userId: user.id
+            userId: user.id,
+            message: notificationMessage || ""
           });
         });
       }
@@ -1258,13 +1274,73 @@ function registerTurnHighlightSettings() {
     config: true,
     type: String,
     filePicker: "audio",
-    default: "sounds/combat/mc-turn-itsyour.ogg",
-    requiresReload: true
+    default: "sounds/combat/mc-turn-itsyour.ogg"
+  });
+  
+  game.settings.register(MODULE_ID, "turnNotificationSoundVolume", {
+    name: game.i18n.localize("DX3rdHUD.TurnNotificationSoundVolume"),
+    hint: game.i18n.localize("DX3rdHUD.TurnNotificationSoundVolumeHint"),
+    scope: "world",
+    config: true,
+    type: Number,
+    default: 1.0,
+    range: {
+      min: 0,
+      max: 2.0,
+      step: 0.1
+    }
+  });
+  
+  game.settings.register(MODULE_ID, "turnNotificationMessage", {
+    name: game.i18n.localize("DX3rdHUD.TurnNotificationMessage"),
+    hint: game.i18n.localize("DX3rdHUD.TurnNotificationMessageHint"),
+    scope: "world",
+    config: true,
+    type: String,
+    default: ""
+  });
+  
+  game.settings.register(MODULE_ID, "turnNotificationMessageFontSize", {
+    name: game.i18n.localize("DX3rdHUD.TurnNotificationMessageFontSize"),
+    hint: game.i18n.localize("DX3rdHUD.TurnNotificationMessageFontSizeHint"),
+    scope: "world",
+    config: true,
+    type: Number,
+    default: 50,
+    range: {
+      min: 25,
+      max: 75,
+      step: 1
+    }
   });
   
   game.settings.register(MODULE_ID, "enableInactivityMonitoring", {
     name: game.i18n.localize("DX3rdHUD.EnableInactivityMonitoring"),
     hint: game.i18n.localize("DX3rdHUD.EnableInactivityMonitoringHint"),
+    scope: "world",
+    config: true,
+    type: Boolean,
+    default: false,
+    requiresReload: true
+  });
+  
+  game.settings.register(MODULE_ID, "inactivityMonitoringTimeout", {
+    name: game.i18n.localize("DX3rdHUD.InactivityMonitoringTimeout"),
+    hint: game.i18n.localize("DX3rdHUD.InactivityMonitoringTimeoutHint"),
+    scope: "world",
+    config: true,
+    type: Number,
+    default: 15,
+    range: {
+      min: 5,
+      max: 30,
+      step: 1
+    }
+  });
+  
+  game.settings.register(MODULE_ID, "enableGMFocusMode", {
+    name: game.i18n.localize("DX3rdHUD.EnableGMFocusMode"),
+    hint: game.i18n.localize("DX3rdHUD.EnableGMFocusModeHint"),
     scope: "world",
     config: true,
     type: Boolean,
@@ -1755,26 +1831,29 @@ function checkMouseActivity() {
   
   console.log(`DX3rd HUD | Checking inactivity - User: ${game.user.name}, Actor: ${actor.name}, Owner: ${isOwner}`);
   
+  // 휴면 감지 시간 설정 가져오기 (초 단위)
+  const inactivityTimeout = game.settings.get(MODULE_ID, "inactivityMonitoringTimeout") * 1000; // 밀리초로 변환
+  
   // 비활성 조건 체크
   let isInactive = false;
   
   // 키보드 활동 체크 (마우스 위치와 무관)
   const timeSinceLastActivity = Date.now() - lastActivity;
-  const hasRecentActivity = timeSinceLastActivity <= 15000;
+  const hasRecentActivity = timeSinceLastActivity <= inactivityTimeout;
   
-  console.log(`DX3rd HUD | Time since last activity: ${Math.round(timeSinceLastActivity / 1000)}s, isMouseInCanvas: ${isMouseInCanvas}`);
+  console.log(`DX3rd HUD | Time since last activity: ${Math.round(timeSinceLastActivity / 1000)}s, isMouseInCanvas: ${isMouseInCanvas}, timeout: ${inactivityTimeout / 1000}s`);
   
   if (hasRecentActivity) {
     // 최근에 키보드나 마우스 활동이 있으면 활성 상태
     isInactive = false;
   } else if (isMouseInCanvas) {
-    // 마우스가 캔버스 안에 있을 때: 15초 이상 활동이 없는지 확인
-    isInactive = timeSinceLastActivity > 15000;
+    // 마우스가 캔버스 안에 있을 때: 설정된 시간 이상 활동이 없는지 확인
+    isInactive = timeSinceLastActivity > inactivityTimeout;
   } else {
-    // 마우스가 캔버스 밖에 있을 때: 15초 이상 밖에 있고 활동이 없는지 확인
+    // 마우스가 캔버스 밖에 있을 때: 설정된 시간 이상 밖에 있고 활동이 없는지 확인
     if (lastMouseLeftCanvas) {
       const timeSinceLeftCanvas = Date.now() - lastMouseLeftCanvas;
-      isInactive = timeSinceLeftCanvas > 15000 && timeSinceLastActivity > 15000;
+      isInactive = timeSinceLeftCanvas > inactivityTimeout && timeSinceLastActivity > inactivityTimeout;
     }
   }
   
@@ -1810,6 +1889,12 @@ function resetInactivityTracking() {
   // GM에게 알림 제거
   if (game.user.isGM) {
     hidePlayerInactiveNotification();
+    // GM 자신의 휴면 플래그도 초기화
+    gmHasNotifiedSelf = false;
+    gmLastActivity = Date.now();
+    if (gmIsMouseInCanvas) {
+      gmLastMouseLeftCanvas = null;
+    }
   }
   
   // 플레이어는 비활성 플래그 초기화
@@ -1853,7 +1938,7 @@ function showPlayerInactiveNotification(userName, actorName) {
     font-size: 16px;
     font-weight: bold;
     text-align: center;
-    z-index: 10000;
+    z-index: 99;
     white-space: nowrap;
     animation: dx3rd-pulse-notification 2s ease-in-out infinite;
     pointer-events: none;
@@ -1893,6 +1978,258 @@ function hidePlayerInactiveNotification() {
   const notification = document.getElementById('dx3rd-player-inactive-notification');
   if (notification) {
     notification.remove();
+  }
+}
+
+/**
+ * 턴 알림 메시지 표시 (플레이어 화면 중앙)
+ */
+function showTurnNotificationMessage(message) {
+  // 기존 메시지가 있으면 제거
+  hideTurnNotificationMessage();
+  
+  // HUD 폰트 설정 가져오기
+  const selectedFont = game.settings.get("lichsoma-dx3rd-hud", "hudNameFont");
+  let fontFamily = "Arial, sans-serif";
+  if (selectedFont !== 'default') {
+    fontFamily = `"${selectedFont}", Arial, sans-serif`;
+  }
+  
+  // 폰트 크기 설정 가져오기
+  const fontSize = game.settings.get(MODULE_ID, "turnNotificationMessageFontSize");
+  
+  // 메시지 생성
+  const messageElement = document.createElement('div');
+  messageElement.id = 'dx3rd-turn-notification-message';
+  messageElement.style.cssText = `
+    position: fixed;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%);
+    color: white;
+    padding: 40px 60px;
+    font-size: ${fontSize}px;
+    font-weight: bold;
+    text-align: center;
+    z-index: 10001;
+    animation: dx3rd-message-appear 0.3s ease-out, dx3rd-message-pulse 2s ease-in-out infinite;
+    pointer-events: none;
+    white-space: pre-wrap;
+    max-width: 80%;
+    font-family: ${fontFamily};
+    text-shadow: 
+      -2px -2px 0 #ff0000,
+      2px -2px 0 #ff0000,
+      -2px 2px 0 #ff0000,
+      2px 2px 0 #ff0000,
+      0 0 10px rgba(255, 0, 0, 0.8),
+      0 0 20px rgba(255, 0, 0, 0.6),
+      0 0 30px rgba(255, 0, 0, 0.4),
+      0 0 40px rgba(255, 0, 0, 0.2);
+  `;
+  messageElement.textContent = message;
+  
+  document.body.appendChild(messageElement);
+  
+  // CSS 애니메이션 추가
+  if (!document.getElementById('dx3rd-turn-message-style')) {
+    const style = document.createElement('style');
+    style.id = 'dx3rd-turn-message-style';
+    style.textContent = `
+      @keyframes dx3rd-message-appear {
+        0% {
+          opacity: 0;
+          transform: translate(-50%, -50%) scale(0.8);
+        }
+        100% {
+          opacity: 1;
+          transform: translate(-50%, -50%) scale(1);
+        }
+      }
+      @keyframes dx3rd-message-pulse {
+        0%, 100% {
+          transform: translate(-50%, -50%) scale(1);
+        }
+        50% {
+          transform: translate(-50%, -50%) scale(1.1);
+        }
+      }
+      @keyframes dx3rd-message-fadeout {
+        0% {
+          opacity: 1;
+          transform: translate(-50%, -50%) scale(1);
+        }
+        100% {
+          opacity: 0;
+          transform: translate(-50%, -50%) scale(0.9);
+        }
+      }
+    `;
+    document.head.appendChild(style);
+  }
+  
+  // 마우스 이동과 키보드 입력 감지 리스너 추가
+  const removeListeners = () => {
+    document.removeEventListener('mousemove', handleMessageDismiss);
+    document.removeEventListener('keydown', handleMessageDismiss);
+  };
+  
+  const handleMessageDismiss = () => {
+    const msg = document.getElementById('dx3rd-turn-notification-message');
+    if (msg) {
+      // 페이드 아웃 애니메이션 적용
+      msg.style.animation = 'dx3rd-message-fadeout 0.5s ease-out forwards';
+      setTimeout(() => {
+        hideTurnNotificationMessage();
+      }, 500);
+    }
+    removeListeners();
+  };
+  
+  // 이벤트 리스너 등록
+  document.addEventListener('mousemove', handleMessageDismiss, { once: true });
+  document.addEventListener('keydown', handleMessageDismiss, { once: true });
+}
+
+/**
+ * 턴 알림 메시지 제거
+ */
+function hideTurnNotificationMessage() {
+  const messageElement = document.getElementById('dx3rd-turn-notification-message');
+  if (messageElement) {
+    messageElement.remove();
+  }
+}
+
+/**
+ * GM용 휴면 감지 시작
+ */
+let gmLastActivity = Date.now();
+let gmLastMouseLeftCanvas = null;
+let gmIsMouseInCanvas = false;
+let gmHasNotifiedSelf = false;
+
+function startGMInactivityMonitoring() {
+  console.log(`DX3rd HUD | Starting GM inactivity monitoring`);
+  
+  // 마우스 이동 이벤트 리스너
+  document.addEventListener('mousemove', handleGMActivity);
+  
+  // 키보드 이벤트 리스너
+  document.addEventListener('keydown', handleGMActivity);
+  document.addEventListener('keypress', handleGMActivity);
+  
+  // 마우스가 캔버스 영역에 들어왔는지 확인
+  const canvasElement = document.getElementById('board');
+  if (canvasElement) {
+    canvasElement.addEventListener('mouseenter', () => {
+      gmIsMouseInCanvas = true;
+      gmLastMouseLeftCanvas = null;
+      handleGMActivity();
+    });
+    
+    canvasElement.addEventListener('mouseleave', () => {
+      gmIsMouseInCanvas = false;
+      gmLastMouseLeftCanvas = Date.now();
+    });
+  }
+  
+  // 주기적으로 체크 (1초마다)
+  setInterval(checkGMActivity, 1000);
+}
+
+function handleGMActivity() {
+  gmLastActivity = Date.now();
+  
+  // 이미 알림을 받은 상태에서 다시 활성화되면 플래그 초기화
+  if (gmHasNotifiedSelf) {
+    gmHasNotifiedSelf = false;
+  }
+}
+
+function checkGMActivity() {
+  // GM 집중 모드 설정이 꺼져있으면 체크하지 않음
+  const gmFocusModeEnabled = game.settings.get(MODULE_ID, "enableGMFocusMode");
+  if (!gmFocusModeEnabled) {
+    gmHasNotifiedSelf = false;
+    return;
+  }
+  
+  // 휴면 감지 설정이 꺼져있으면 체크하지 않음
+  const monitoringEnabled = game.settings.get(MODULE_ID, "enableInactivityMonitoring");
+  if (!monitoringEnabled) {
+    gmHasNotifiedSelf = false;
+    return;
+  }
+  
+  // 전투가 진행 중이지 않으면 체크하지 않음
+  if (!game.combat || !game.combat.started) {
+    gmHasNotifiedSelf = false;
+    return;
+  }
+  
+  // 현재 턴의 combatant 가져오기
+  const currentCombatant = game.combat.combatant;
+  if (!currentCombatant || !currentCombatant.actor) {
+    gmHasNotifiedSelf = false;
+    return;
+  }
+  
+  // 프로세스 combatant는 제외
+  const isProcess = currentCombatant.getFlag('double-cross-3rd', 'isProcessCombatant');
+  if (isProcess) {
+    gmHasNotifiedSelf = false;
+    return;
+  }
+  
+  // 휴면 감지 시간 설정 가져오기
+  const inactivityTimeout = game.settings.get(MODULE_ID, "inactivityMonitoringTimeout") * 1000;
+  
+  // 비활성 조건 체크
+  let isInactive = false;
+  
+  const timeSinceLastActivity = Date.now() - gmLastActivity;
+  const hasRecentActivity = timeSinceLastActivity <= inactivityTimeout;
+  
+  if (hasRecentActivity) {
+    isInactive = false;
+  } else if (gmIsMouseInCanvas) {
+    // 마우스가 캔버스 안에 있을 때: 설정된 시간 이상 활동이 없는지 확인
+    isInactive = timeSinceLastActivity > inactivityTimeout;
+  } else {
+    // 마우스가 캔버스 밖에 있을 때: 설정된 시간 이상 밖에 있고 활동이 없는지 확인
+    if (gmLastMouseLeftCanvas) {
+      const timeSinceLeftCanvas = Date.now() - gmLastMouseLeftCanvas;
+      isInactive = timeSinceLeftCanvas > inactivityTimeout && timeSinceLastActivity > inactivityTimeout;
+    }
+  }
+  
+  if (isInactive && !gmHasNotifiedSelf) {
+    // GM 자신에게 알림
+    notifyGMInactivity();
+    gmHasNotifiedSelf = true;
+  }
+}
+
+function notifyGMInactivity() {
+  console.log(`DX3rd HUD | GM is inactive, showing notification`);
+  
+  // 사운드 재생
+  const soundPath = game.settings.get(MODULE_ID, "turnNotificationSound");
+  const soundVolume = game.settings.get(MODULE_ID, "turnNotificationSoundVolume");
+  if (soundPath) {
+    AudioHelper.play({
+      src: soundPath,
+      volume: soundVolume,
+      autoplay: true,
+      loop: false
+    }, false);
+  }
+  
+  // 메시지 표시
+  const message = game.settings.get(MODULE_ID, "turnNotificationMessage");
+  if (message && message.trim() !== "") {
+    showTurnNotificationMessage(message);
   }
 }
 
