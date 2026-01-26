@@ -16,14 +16,9 @@ Foundry VTT의 Double Cross 3rd Edition 시스템을 위한 HUD 모듈입니다.
 
 ## 설치 방법
 
-1. Foundry VTT의 **Add-on Modules** 탭으로 이동
-2. **Install Module** 버튼 클릭
-3. 검색창에서 "LichSOMA's DX3rd HUD" 검색 후 설치
-
-또는 수동으로 설치:
-1. 이 저장소를 다운로드
-2. Foundry VTT의 `Data/modules/` 폴더에 압축 해제
-3. Foundry VTT 재시작
+1. 압축 파일을 다운로드합니다
+2. Foundry VTT의 `Data/modules` 폴더에 압축을 풉니다
+3. Foundry VTT를 재시작하고 월드에서 모듈을 활성화합니다
 
 ## 사용법
 
