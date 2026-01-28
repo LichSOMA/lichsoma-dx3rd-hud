@@ -221,7 +221,28 @@ Hooks.on('deleteToken', (tokenDoc) => {
 });
 
 // 토큰 업데이트 시 HUD 업데이트
-Hooks.on('updateToken', () => {
+Hooks.on('updateToken', (tokenDocument, updateData, options, userId) => {
+  // 위치 관련 변경만 있는 경우 HUD 업데이트하지 않음
+  const positionOnly = updateData.x !== undefined || updateData.y !== undefined || 
+                        updateData.rotation !== undefined || updateData.width !== undefined || 
+                        updateData.height !== undefined || updateData.elevation !== undefined ||
+                        updateData.lockRotation !== undefined || updateData.disposition !== undefined ||
+                        updateData.displayName !== undefined || updateData.displayBars !== undefined ||
+                        updateData.bar1 !== undefined || updateData.bar2 !== undefined ||
+                        updateData.flags !== undefined;
+  
+  // 위치 관련 변경만 있고 다른 중요한 변경이 없는 경우 스킵
+  const hasOtherChanges = updateData.hidden !== undefined || updateData.alpha !== undefined ||
+                          updateData.brightness !== undefined || updateData.saturation !== undefined ||
+                          updateData.tint !== undefined || updateData.vision !== undefined ||
+                          updateData.actorId !== undefined || updateData.actorLink !== undefined ||
+                          updateData.actorData !== undefined;
+  
+  // 위치 변경만 있고 다른 변경이 없으면 HUD 업데이트하지 않음
+  if (positionOnly && !hasOtherChanges) {
+    return;
+  }
+  
   const state = getSceneHudState();
   if (state.playerHudVisible) updatePlayerHUD();
   if (state.enemyHudVisible) updateEnemyHUD();
