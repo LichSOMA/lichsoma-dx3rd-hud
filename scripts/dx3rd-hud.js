@@ -222,24 +222,16 @@ Hooks.on('deleteToken', (tokenDoc) => {
 
 // 토큰 업데이트 시 HUD 업데이트
 Hooks.on('updateToken', (tokenDocument, updateData, options, userId) => {
-  // 위치 관련 변경만 있는 경우 HUD 업데이트하지 않음
-  const positionOnly = updateData.x !== undefined || updateData.y !== undefined || 
-                        updateData.rotation !== undefined || updateData.width !== undefined || 
-                        updateData.height !== undefined || updateData.elevation !== undefined ||
-                        updateData.lockRotation !== undefined || updateData.disposition !== undefined ||
-                        updateData.displayName !== undefined || updateData.displayBars !== undefined ||
-                        updateData.bar1 !== undefined || updateData.bar2 !== undefined ||
-                        updateData.flags !== undefined;
+  // HUD에 영향을 주는 중요한 필드들 체크
+  // HP, 침식률 등은 updateActor 훅에서 처리하므로 여기서는 토큰 관련 필드만 체크
+  const importantFields = ['hidden', 'alpha', 'brightness', 'saturation', 'tint', 'vision', 
+                          'actorId', 'actorLink', 'actorData', 'disposition', 
+                          'displayName', 'displayBars', 'bar1', 'bar2'];
+  const hasImportantChange = importantFields.some(field => updateData[field] !== undefined);
   
-  // 위치 관련 변경만 있고 다른 중요한 변경이 없는 경우 스킵
-  const hasOtherChanges = updateData.hidden !== undefined || updateData.alpha !== undefined ||
-                          updateData.brightness !== undefined || updateData.saturation !== undefined ||
-                          updateData.tint !== undefined || updateData.vision !== undefined ||
-                          updateData.actorId !== undefined || updateData.actorLink !== undefined ||
-                          updateData.actorData !== undefined;
-  
-  // 위치 변경만 있고 다른 변경이 없으면 HUD 업데이트하지 않음
-  if (positionOnly && !hasOtherChanges) {
+  // 중요한 필드가 변경되지 않았으면 스킵
+  // 위치 변경(x, y, rotation 등)이나 flags 변경(이동 기록 삭제 등)은 HUD와 무관하므로 무시
+  if (!hasImportantChange) {
     return;
   }
   
@@ -1184,8 +1176,41 @@ function updatePCHUDRow(wrapper, token) {
   const hpPct = Math.clamp(hp / maxHp, 0, 1) * 100;
   
   // 이전 침식률 값 가져오기 (순차 애니메이션용)
-  const prevEnc = parseInt(wrapper.dataset.encroachment || '0');
-  wrapper.dataset.encroachment = enc;
+  // dataset에 저장된 값이 없으면 현재 DOM의 실제 값에서 역산
+  let prevEnc = parseInt(wrapper.dataset.encroachment || '');
+  if (isNaN(prevEnc)) {
+    // DOM에서 현재 침식률 값 역산
+    const fill1 = wrapper.querySelector(".pc-bar-enc .pc-enc-fill-1");
+    const fill2 = wrapper.querySelector(".pc-bar-enc .pc-enc-fill-2");
+    const fill3 = wrapper.querySelector(".pc-bar-enc .pc-enc-fill-3");
+    
+    if (fill1 && fill2 && fill3) {
+      const seg1Width = parseFloat(fill1.style.width) || 0;
+      const seg2Width = parseFloat(fill2.style.width) || 0;
+      const seg3Width = parseFloat(fill3.style.width) || 0;
+      prevEnc = Math.min(seg1Width, 100) + Math.min(seg2Width, 100) + Math.min(seg3Width, 100);
+    } else {
+      prevEnc = enc; // 요소가 없으면 현재 값과 같다고 가정
+    }
+  }
+  
+  // 값이 변경되지 않았으면 애니메이션 없이 즉시 적용하고 종료
+  if (prevEnc === enc) {
+    wrapper.dataset.encroachment = enc;
+    const fill1 = wrapper.querySelector(".pc-bar-enc .pc-enc-fill-1");
+    const fill2 = wrapper.querySelector(".pc-bar-enc .pc-enc-fill-2");
+    const fill3 = wrapper.querySelector(".pc-bar-enc .pc-enc-fill-3");
+    
+    const seg1 = Math.min(enc, 100);
+    const seg2 = enc > 100 ? Math.min(enc - 100, 100) : 0;
+    const seg3 = enc > 200 ? Math.min(enc - 200, 100) : 0;
+    
+    if (fill1) fill1.style.width = `${seg1}%`;
+    if (fill2) fill2.style.width = `${seg2}%`;
+    if (fill3) fill3.style.width = `${seg3}%`;
+  } else {
+    wrapper.dataset.encroachment = enc;
+  }
   
   // 침식률 구간 계산 (0-100, 101-200, 201-300)
   const seg1 = Math.min(enc, 100);
@@ -1253,50 +1278,47 @@ function updatePCHUDRow(wrapper, token) {
   const fill2 = wrapper.querySelector(".pc-bar-enc .pc-enc-fill-2");
   const fill3 = wrapper.querySelector(".pc-bar-enc .pc-enc-fill-3");
   
-  // 증가하는 경우: seg1 → seg2 → seg3 순차적으로
-  if (enc > prevEnc) {
-    // seg1 먼저 설정
-    if (fill1) fill1.style.width = `${seg1}%`;
-    
-    // seg1이 100%일 때만 seg2 설정 (300ms 후)
-    if (seg1 >= 100) {
+  // 값이 변경되지 않았으면 애니메이션 없이 건너뛰기 (이미 위에서 즉시 적용됨)
+  if (prevEnc !== enc) {
+    // 증가하는 경우: seg1 → seg2 → seg3 순차적으로
+    if (enc > prevEnc) {
+      // seg1 먼저 설정
+      if (fill1) fill1.style.width = `${seg1}%`;
+      
+      // seg1이 100%일 때만 seg2 설정 (300ms 후)
+      if (seg1 >= 100) {
+        setTimeout(() => {
+          if (fill2) fill2.style.width = `${seg2}%`;
+        }, 300);
+      } else {
+        if (fill2) fill2.style.width = '0%';
+        if (fill3) fill3.style.width = '0%';
+      }
+      
+      // seg2가 100%일 때만 seg3 설정 (600ms 후)
+      if (seg1 >= 100 && seg2 >= 100) {
+        setTimeout(() => {
+          if (fill3) fill3.style.width = `${seg3}%`;
+        }, 600);
+      } else if (seg2 < 100) {
+        if (fill3) fill3.style.width = '0%';
+      }
+    }
+    // 감소하는 경우: seg3 → seg2 → seg1 역순으로
+    else if (enc < prevEnc) {
+      // seg3부터 설정
+      if (fill3) fill3.style.width = `${seg3}%`;
+      
+      // 300ms 후 seg2 설정
       setTimeout(() => {
         if (fill2) fill2.style.width = `${seg2}%`;
       }, 300);
-    } else {
-      if (fill2) fill2.style.width = '0%';
-      if (fill3) fill3.style.width = '0%';
-    }
-    
-    // seg2가 100%일 때만 seg3 설정 (600ms 후)
-    if (seg1 >= 100 && seg2 >= 100) {
+      
+      // 600ms 후 seg1 설정
       setTimeout(() => {
-        if (fill3) fill3.style.width = `${seg3}%`;
+        if (fill1) fill1.style.width = `${seg1}%`;
       }, 600);
-    } else if (seg2 < 100) {
-      if (fill3) fill3.style.width = '0%';
     }
-  }
-  // 감소하는 경우: seg3 → seg2 → seg1 역순으로
-  else if (enc < prevEnc) {
-    // seg3부터 설정
-    if (fill3) fill3.style.width = `${seg3}%`;
-    
-    // 300ms 후 seg2 설정
-    setTimeout(() => {
-      if (fill2) fill2.style.width = `${seg2}%`;
-    }, 300);
-    
-    // 600ms 후 seg1 설정
-    setTimeout(() => {
-      if (fill1) fill1.style.width = `${seg1}%`;
-    }, 600);
-  }
-  // 변화 없으면 즉시 적용
-  else {
-    if (fill1) fill1.style.width = `${seg1}%`;
-    if (fill2) fill2.style.width = `${seg2}%`;
-    if (fill3) fill3.style.width = `${seg3}%`;
   }
   
   // 침식률 텍스트 업데이트
@@ -1588,8 +1610,41 @@ function updateEnemyHUDRow(wrapper, token) {
   const hpPct = Math.clamp(hp / maxHp, 0, 1) * 100;
   
   // 이전 침식률 값 가져오기 (순차 애니메이션용)
-  const prevEnc = parseInt(wrapper.dataset.encroachment || '0');
-  wrapper.dataset.encroachment = enc;
+  // dataset에 저장된 값이 없으면 현재 DOM의 실제 값에서 역산
+  let prevEnc = parseInt(wrapper.dataset.encroachment || '');
+  if (isNaN(prevEnc)) {
+    // DOM에서 현재 침식률 값 역산
+    const fill1 = wrapper.querySelector(".enemy-bar-enc .enemy-enc-fill-1");
+    const fill2 = wrapper.querySelector(".enemy-bar-enc .enemy-enc-fill-2");
+    const fill3 = wrapper.querySelector(".enemy-bar-enc .enemy-enc-fill-3");
+    
+    if (fill1 && fill2 && fill3) {
+      const seg1Width = parseFloat(fill1.style.width) || 0;
+      const seg2Width = parseFloat(fill2.style.width) || 0;
+      const seg3Width = parseFloat(fill3.style.width) || 0;
+      prevEnc = Math.min(seg1Width, 100) + Math.min(seg2Width, 100) + Math.min(seg3Width, 100);
+    } else {
+      prevEnc = enc; // 요소가 없으면 현재 값과 같다고 가정
+    }
+  }
+  
+  // 값이 변경되지 않았으면 애니메이션 없이 즉시 적용
+  if (prevEnc === enc) {
+    wrapper.dataset.encroachment = enc;
+    const fill1 = wrapper.querySelector(".enemy-bar-enc .enemy-enc-fill-1");
+    const fill2 = wrapper.querySelector(".enemy-bar-enc .enemy-enc-fill-2");
+    const fill3 = wrapper.querySelector(".enemy-bar-enc .enemy-enc-fill-3");
+    
+    const seg1 = Math.min(enc, 100);
+    const seg2 = enc > 100 ? Math.min(enc - 100, 100) : 0;
+    const seg3 = enc > 200 ? Math.min(enc - 200, 100) : 0;
+    
+    if (fill1) fill1.style.width = `${seg1}%`;
+    if (fill2) fill2.style.width = `${seg2}%`;
+    if (fill3) fill3.style.width = `${seg3}%`;
+  } else {
+    wrapper.dataset.encroachment = enc;
+  }
   
   // 침식률 구간 계산 (0-100, 101-200, 201-300)
   const seg1 = Math.min(enc, 100);
@@ -1624,50 +1679,47 @@ function updateEnemyHUDRow(wrapper, token) {
   const fill2 = wrapper.querySelector(".enemy-bar-enc .enemy-enc-fill-2");
   const fill3 = wrapper.querySelector(".enemy-bar-enc .enemy-enc-fill-3");
   
-  // 증가하는 경우: seg1 → seg2 → seg3 순차적으로
-  if (enc > prevEnc) {
-    // seg1 먼저 설정
-    if (fill1) fill1.style.width = `${seg1}%`;
-    
-    // seg1이 100%일 때만 seg2 설정 (300ms 후)
-    if (seg1 >= 100) {
+  // 값이 변경되지 않았으면 애니메이션 없이 건너뛰기 (이미 위에서 즉시 적용됨)
+  if (prevEnc !== enc) {
+    // 증가하는 경우: seg1 → seg2 → seg3 순차적으로
+    if (enc > prevEnc) {
+      // seg1 먼저 설정
+      if (fill1) fill1.style.width = `${seg1}%`;
+      
+      // seg1이 100%일 때만 seg2 설정 (300ms 후)
+      if (seg1 >= 100) {
+        setTimeout(() => {
+          if (fill2) fill2.style.width = `${seg2}%`;
+        }, 300);
+      } else {
+        if (fill2) fill2.style.width = '0%';
+        if (fill3) fill3.style.width = '0%';
+      }
+      
+      // seg2가 100%일 때만 seg3 설정 (600ms 후)
+      if (seg1 >= 100 && seg2 >= 100) {
+        setTimeout(() => {
+          if (fill3) fill3.style.width = `${seg3}%`;
+        }, 600);
+      } else if (seg2 < 100) {
+        if (fill3) fill3.style.width = '0%';
+      }
+    }
+    // 감소하는 경우: seg3 → seg2 → seg1 역순으로
+    else if (enc < prevEnc) {
+      // seg3부터 설정
+      if (fill3) fill3.style.width = `${seg3}%`;
+      
+      // 300ms 후 seg2 설정
       setTimeout(() => {
         if (fill2) fill2.style.width = `${seg2}%`;
       }, 300);
-    } else {
-      if (fill2) fill2.style.width = '0%';
-      if (fill3) fill3.style.width = '0%';
-    }
-    
-    // seg2가 100%일 때만 seg3 설정 (600ms 후)
-    if (seg1 >= 100 && seg2 >= 100) {
+      
+      // 600ms 후 seg1 설정
       setTimeout(() => {
-        if (fill3) fill3.style.width = `${seg3}%`;
+        if (fill1) fill1.style.width = `${seg1}%`;
       }, 600);
-    } else if (seg2 < 100) {
-      if (fill3) fill3.style.width = '0%';
     }
-  }
-  // 감소하는 경우: seg3 → seg2 → seg1 역순으로
-  else if (enc < prevEnc) {
-    // seg3부터 설정
-    if (fill3) fill3.style.width = `${seg3}%`;
-    
-    // 300ms 후 seg2 설정
-    setTimeout(() => {
-      if (fill2) fill2.style.width = `${seg2}%`;
-    }, 300);
-    
-    // 600ms 후 seg1 설정
-    setTimeout(() => {
-      if (fill1) fill1.style.width = `${seg1}%`;
-    }, 600);
-  }
-  // 변화 없으면 즉시 적용
-  else {
-    if (fill1) fill1.style.width = `${seg1}%`;
-    if (fill2) fill2.style.width = `${seg2}%`;
-    if (fill3) fill3.style.width = `${seg3}%`;
   }
   
   // 침식률 텍스트 업데이트 (GM만 표시)
