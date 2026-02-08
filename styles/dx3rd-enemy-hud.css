@@ -196,6 +196,8 @@
   border: 2px solid #111;
   background-color: rgba(128, 128, 128, 0.75);
   position: relative;
+  backdrop-filter: blur(2px);
+  -webkit-backdrop-filter: blur(2px);
 }
 
 .enemy-ui-actor-name {
@@ -225,10 +227,21 @@
   top: 50%;
   left: 50%;
   transform: skewX(20deg) translate(-50%, -50%);
-  background-color: rgba(128, 128, 128, 0.5);
 }
 
 /* Actor 이미지와 HUD 이미지 위치는 JavaScript에서 설정 */
+
+.blood-overlay {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  border: none;
+  pointer-events: none;
+  z-index: 1;
+  transition: opacity 0.8s ease;
+}
 
 .enemy-ui-row.small {
   transform: scale(0.7);
@@ -407,5 +420,73 @@
       -1px 0px black, 0px 1px black, 1px 0px black, 0px -1px black,
       0 0 15px rgba(255, 215, 0, 1),
       0 0 30px rgba(255, 215, 0, 0.8);
+  }
+}
+
+/* 데미지 플래시 오버레이 */
+.damage-flash-overlay {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  pointer-events: none;
+  z-index: 10;
+  opacity: 0;
+  transition: opacity 0.3s ease-out;
+  mix-blend-mode: screen;
+}
+
+/* 데미지 강도별 색상 및 애니메이션 */
+.damage-flash-overlay.damage-flash-intensity-1 {
+  background: radial-gradient(circle, rgba(255, 100, 100, 0.1) 0%, rgba(180, 0, 0, 0.4) 100%);
+}
+
+.damage-flash-overlay.damage-flash-intensity-2 {
+  background: radial-gradient(circle, rgba(255, 80, 80, 0.2) 0%, rgba(160, 0, 0, 0.6) 100%);
+}
+
+.damage-flash-overlay.damage-flash-intensity-3 {
+  background: radial-gradient(circle, rgba(255, 60, 60, 0.3) 0%, rgba(140, 0, 0, 0.8) 100%);
+}
+
+.damage-flash-overlay.damage-flash-intensity-4 {
+  background: radial-gradient(circle, rgba(255, 50, 50, 0.4) 0%, rgba(120, 0, 0, 1) 100%);
+}
+
+/* 플래시 활성화 시 애니메이션 */
+.damage-flash-overlay.active {
+  animation: damage-flash-pulse 1.2s ease-in-out;
+}
+
+@keyframes damage-flash-pulse {
+  0% {
+    opacity: 0;
+  }
+  10% {
+    opacity: 1;
+  }
+  40% {
+    opacity: 0.9;
+  }
+  100% {
+    opacity: 0;
+  }
+}
+
+/* 데미지 받았을 때 떨림 효과 */
+.enemy-ui-icon-wrapper.damage-shake {
+  animation: damage-shake-wrapper 1.2s ease-in-out;
+}
+
+@keyframes damage-shake-wrapper {
+  0%, 100% {
+    transform: translateX(0);
+  }
+  6.25%, 18.75%, 31.25%, 43.75%, 56.25%, 68.75%, 81.25%, 93.75% {
+    transform: translateX(-1.5px);
+  }
+  12.5%, 25%, 37.5%, 50%, 62.5%, 75%, 87.5% {
+    transform: translateX(1.5px);
   }
 }

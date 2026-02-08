@@ -13,6 +13,47 @@
   transition: opacity 0.8s ease;
 }
 
+/* HUD 이미지 설정 다이얼로그 */
+.hud-image-settings-input-wrapper {
+  display: flex;
+  gap: 5px;
+}
+
+.hud-image-settings-input-wrapper input[type="text"] {
+  flex: 1;
+}
+
+.hud-image-settings-preview-container {
+  width: 350px;
+  height: 100px;
+  position: relative;
+  margin: 10px auto;
+  overflow: hidden;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.hud-image-settings-preview-frame {
+  width: 240px;
+  height: 85px;
+  border: 2px solid #111;
+  background: rgba(128, 128, 128, 0.8);
+  position: relative;
+  overflow: hidden;
+  transform: skewX(-20deg);
+  transform-origin: right;
+  backdrop-filter: blur(2px);
+  -webkit-backdrop-filter: blur(2px);
+}
+
+.hud-image-settings-preview-image {
+  position: absolute;
+  width: 288px; /* 240 * 1.2 */
+  object-fit: contain;
+  transform-origin: left;
+}
+
 /* HUD 이미지 설정 버튼 */
 .hud-image-button {
   flex: 0 0 auto;

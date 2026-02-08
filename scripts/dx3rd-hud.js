@@ -281,11 +281,18 @@ Hooks.on('deleteCombatant', (combatant, options, userId) => {
 // 전투 상태 변경 시 Enemy HUD 업데이트 및 전투 시작 감지
 Hooks.on('updateCombat', (combat, changed, options, userId) => {
   const state = getSceneHudState();
-  if (state.enemyHudVisible) {
+  
+  // 컴배턴트 목록이 변경되었을 때만 전체 HUD 업데이트
+  // (컴배턴트 추가/삭제, 순서 변경 등)
+  const combatantsChanged = changed.combatants !== undefined;
+  
+  // 턴 변경이나 라운드 변경만 있을 때는 전체 HUD를 다시 렌더링하지 않음
+  // (침식률바 애니메이션이 다시 실행되는 것을 방지)
+  if (combatantsChanged && state.enemyHudVisible) {
     updateEnemyHUD();
   }
   
-  // 턴 변경 감지
+  // 턴 변경 감지 (전체 HUD를 다시 렌더링하지 않고 하이라이트만 업데이트)
   if (changed.turn !== undefined || changed.combatantId !== undefined) {
     updateCurrentTurnHighlight();
   }
@@ -399,7 +406,28 @@ Hooks.on('updateActor', (actor, changes) => {
     tokens.forEach(token => {
       const row = document.querySelector(`#dx3rd-hud-players-list .pc-ui-row[data-token-id="${token.id}"]`);
       if (row) {
+        // HP 감소 감지 (데미지 플래시 효과용)
+        const hpChanged = changes.system?.attributes?.hp?.value !== undefined;
+        let hpDamagePercent = 0;
+        
+        if (hpChanged) {
+          const newHP = changes.system.attributes.hp.value;
+          const oldHP = parseInt(row.dataset.lastHp || newHP);
+          const maxHP = actor.system.attributes.hp.max;
+          
+          // HP가 감소한 경우
+          if (newHP < oldHP) {
+            const damageAmount = oldHP - newHP;
+            hpDamagePercent = (damageAmount / maxHP) * 100;
+          }
+        }
+        
         updatePCHUDRow(row, token);
+        
+        // HP 감소 시 데미지 플래시 효과
+        if (hpDamagePercent > 0) {
+          applyDamageFlash(row, hpDamagePercent, 'pc');
+        }
       }
     });
   }
@@ -413,7 +441,28 @@ Hooks.on('updateActor', (actor, changes) => {
         tokens.forEach(token => {
           const row = document.querySelector(`#dx3rd-hud-enemies-list .enemy-ui-row[data-token-id="${token.id}"]`);
           if (row) {
+            // HP 감소 감지 (데미지 플래시 효과용)
+            const hpChanged = changes.system?.attributes?.hp?.value !== undefined;
+            let hpDamagePercent = 0;
+            
+            if (hpChanged) {
+              const newHP = changes.system.attributes.hp.value;
+              const oldHP = parseInt(row.dataset.lastHp || newHP);
+              const maxHP = actor.system.attributes.hp.max;
+              
+              // HP가 감소한 경우
+              if (newHP < oldHP) {
+                const damageAmount = oldHP - newHP;
+                hpDamagePercent = (damageAmount / maxHP) * 100;
+              }
+            }
+            
             updateEnemyHUDRow(row, token);
+            
+            // HP 감소 시 데미지 플래시 효과
+            if (hpDamagePercent > 0) {
+              applyDamageFlash(row, hpDamagePercent, 'enemy');
+            }
           }
         });
       }
@@ -1429,6 +1478,9 @@ function updatePCHUDRow(wrapper, token) {
     box.appendChild(icon);
     cond.appendChild(box);
   });
+  
+  // 현재 HP를 저장 (다음 업데이트 시 비교용)
+  wrapper.dataset.lastHp = hp;
 }
 
 // 토큰 정렬 함수
@@ -1674,6 +1726,43 @@ function updateEnemyHUDRow(wrapper, token) {
     }
   }
   
+  // 피격 표시용 블러드 마크 (피가 많이 줄어들수록 진해짐)
+  const wrapperIcon = wrapper.querySelector('.enemy-ui-icon-wrapper');
+  
+  // 기존 오버레이 요소들을 찾거나 새로 생성
+  let overlayA = wrapperIcon.querySelector('.blood-overlay-a');
+  let overlayB = wrapperIcon.querySelector('.blood-overlay-b');
+  let overlayC = wrapperIcon.querySelector('.blood-overlay-c');
+  
+  if (!overlayA) {
+    overlayA = document.createElement('img');
+    overlayA.src = 'modules/lichsoma-dx3rd-hud/assets/blood_mark_a.png';
+    overlayA.classList.add('blood-overlay', 'blood-overlay-a');
+    overlayA.style.opacity = '0';
+    wrapperIcon.appendChild(overlayA);
+  }
+  if (!overlayB) {
+    overlayB = document.createElement('img');
+    overlayB.src = 'modules/lichsoma-dx3rd-hud/assets/blood_mark_b.png';
+    overlayB.classList.add('blood-overlay', 'blood-overlay-b');
+    overlayB.style.opacity = '0';
+    wrapperIcon.appendChild(overlayB);
+  }
+  if (!overlayC) {
+    overlayC = document.createElement('img');
+    overlayC.src = 'modules/lichsoma-dx3rd-hud/assets/blood_mark_c.png';
+    overlayC.classList.add('blood-overlay', 'blood-overlay-c');
+    overlayC.style.opacity = '0';
+    wrapperIcon.appendChild(overlayC);
+  }
+  
+  // opacity 값 업데이트
+  requestAnimationFrame(() => {
+    overlayA.style.opacity = hpPct < 75 ? String(1 - hpPct / 100) : '0';
+    overlayB.style.opacity = hpPct < 50 ? String(1 - hpPct / 100) : '0';
+    overlayC.style.opacity = hpPct <= 25 ? String(1 - hpPct / 100) : '0';
+  });
+  
   // 침식률 바 적용 (순차적으로)
   const fill1 = wrapper.querySelector(".enemy-bar-enc .enemy-enc-fill-1");
   const fill2 = wrapper.querySelector(".enemy-bar-enc .enemy-enc-fill-2");
@@ -1834,6 +1923,9 @@ function updateEnemyHUDRow(wrapper, token) {
     box.appendChild(icon);
     cond.appendChild(box);
   });
+  
+  // 현재 HP를 저장 (다음 업데이트 시 비교용)
+  wrapper.dataset.lastHp = hp;
 }
 
 // 액터 시트에 HUD 버튼 추가
@@ -1890,8 +1982,8 @@ function openHUDImageDialog(actor) {
       <form>
         <div class="form-group">
           <label>${game.i18n.localize('DX3rdHUD.ImageSettings.ImagePath')}</label>
-          <div style="display: flex; gap: 5px;">
-            <input type="text" name="hudImage" value="${currentHudImage}" style="flex: 1;" />
+          <div class="hud-image-settings-input-wrapper">
+            <input type="text" name="hudImage" value="${currentHudImage}" />
             <button type="button" class="file-picker" data-type="imagevideo" data-target="hudImage">
               <i class="fas fa-file-import fa-fw"></i>
             </button>
@@ -1916,9 +2008,9 @@ function openHUDImageDialog(actor) {
         
         <div class="form-group">
           <label>${game.i18n.localize('DX3rdHUD.ImageSettings.Preview')}</label>
-          <div style="width: 350px; height: 100px; position: relative; margin: 10px auto; overflow: hidden; display: flex; align-items: center; justify-content: center;">
-            <div style="width: ${previewFrameWidth}px; height: ${previewFrameHeight}px; border: 2px solid #111; background: #333; position: relative; overflow: hidden; transform: skewX(-20deg); transform-origin: right;">
-              <img id="hud-preview" src="${currentHudImage}" style="position: absolute; width: ${previewImageWidth}px; object-fit: contain; left: ${currentOffsetX}%; top: ${currentOffsetY}%; transform: skewX(20deg) translate(-50%, -50%) scale(${currentScale / 100}); transform-origin: left; background-color: rgba(128, 128, 128, 0.5);" />
+          <div class="hud-image-settings-preview-container">
+            <div class="hud-image-settings-preview-frame">
+              <img id="hud-preview" class="hud-image-settings-preview-image" src="${currentHudImage}" style="left: ${currentOffsetX}%; top: ${currentOffsetY}%; transform: skewX(20deg) translate(-50%, -50%) scale(${currentScale / 100});" />
             </div>
           </div>
         </div>
@@ -2662,4 +2754,65 @@ function updateCurrentTurnHighlight() {
   if (enemyRow) {
     enemyRow.classList.add('current-turn');
   }
+}
+
+/**
+ * HP 데미지 플래시 효과 적용
+ * @param {HTMLElement} row - HUD Row 요소
+ * @param {number} damagePercent - 최대 HP 대비 데미지 비율 (0-100)
+ * @param {string} hudType - 'pc' 또는 'enemy'
+ */
+function applyDamageFlash(row, damagePercent, hudType) {
+  // 아이콘 프레임과 래퍼 찾기
+  const iconFrame = row.querySelector(hudType === 'pc' ? '.pc-ui-icon-frame' : '.enemy-ui-icon-frame');
+  const iconWrapper = row.querySelector(hudType === 'pc' ? '.pc-ui-icon-wrapper' : '.enemy-ui-icon-wrapper');
+  
+  if (!iconFrame || !iconWrapper) {
+    console.warn('DX3rd HUD: Icon frame or wrapper not found for damage flash');
+    return;
+  }
+  
+  // 데미지 강도 계산 (4단계)
+  let intensity = 1; // 기본값 (0-25%)
+  if (damagePercent > 75) {
+    intensity = 4; // 76-100%
+  } else if (damagePercent > 50) {
+    intensity = 3; // 51-75%
+  } else if (damagePercent > 25) {
+    intensity = 2; // 26-50%
+  }
+  
+  console.log(`DX3rd HUD: Applying damage flash - Damage: ${damagePercent.toFixed(1)}%, Intensity: ${intensity}`);
+  
+  // 기존 오버레이 제거
+  const existingOverlay = iconFrame.querySelector('.damage-flash-overlay');
+  if (existingOverlay) {
+    existingOverlay.remove();
+  }
+  
+  // 데미지 플래시 오버레이 생성
+  const overlay = document.createElement('div');
+  overlay.className = `damage-flash-overlay damage-flash-intensity-${intensity}`;
+  iconFrame.appendChild(overlay);
+  
+  // 애니메이션 시작
+  requestAnimationFrame(() => {
+    overlay.classList.add('active');
+  });
+  
+  // 떨림 효과 추가 (wrapper에 클래스 추가)
+  iconWrapper.classList.add('damage-shake');
+  
+  // 애니메이션 완료 후 제거
+  setTimeout(() => {
+    overlay.classList.remove('active');
+    setTimeout(() => {
+      overlay.remove();
+    }, 300); // fade-out 시간
+  }, 1200); // 전체 애니메이션 시간 (1.2초)
+  
+  // 떨림 효과 제거
+  setTimeout(() => {
+    iconWrapper.classList.remove('damage-shake');
+  }, 1200); // 떨림 효과 시간 (1.2초)
 }
