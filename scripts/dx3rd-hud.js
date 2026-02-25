@@ -406,7 +406,7 @@ Hooks.on('updateActor', (actor, changes) => {
     tokens.forEach(token => {
       const row = document.querySelector(`#dx3rd-hud-players-list .pc-ui-row[data-token-id="${token.id}"]`);
       if (row) {
-        // HP 감소 감지 (데미지 플래시 효과용)
+        // HP 감소 감지 (데미지 플래시 효과용) - updatePCHUDRow 전에 체크
         const hpChanged = changes.system?.attributes?.hp?.value !== undefined;
         let hpDamagePercent = 0;
         
@@ -415,16 +415,17 @@ Hooks.on('updateActor', (actor, changes) => {
           const oldHP = parseInt(row.dataset.lastHp || newHP);
           const maxHP = actor.system.attributes.hp.max;
           
-          // HP가 감소한 경우
+          // HP가 감소한 경우만 (증가는 제외)
           if (newHP < oldHP) {
             const damageAmount = oldHP - newHP;
             hpDamagePercent = (damageAmount / maxHP) * 100;
           }
         }
         
+        // Row 업데이트 (lastHp는 여기서 업데이트됨)
         updatePCHUDRow(row, token);
         
-        // HP 감소 시 데미지 플래시 효과
+        // HP 감소 시에만 데미지 플래시 효과 적용
         if (hpDamagePercent > 0) {
           applyDamageFlash(row, hpDamagePercent, 'pc');
         }
@@ -441,7 +442,7 @@ Hooks.on('updateActor', (actor, changes) => {
         tokens.forEach(token => {
           const row = document.querySelector(`#dx3rd-hud-enemies-list .enemy-ui-row[data-token-id="${token.id}"]`);
           if (row) {
-            // HP 감소 감지 (데미지 플래시 효과용)
+            // HP 감소 감지 (데미지 플래시 효과용) - updateEnemyHUDRow 전에 체크
             const hpChanged = changes.system?.attributes?.hp?.value !== undefined;
             let hpDamagePercent = 0;
             
@@ -450,16 +451,17 @@ Hooks.on('updateActor', (actor, changes) => {
               const oldHP = parseInt(row.dataset.lastHp || newHP);
               const maxHP = actor.system.attributes.hp.max;
               
-              // HP가 감소한 경우
+              // HP가 감소한 경우만 (증가는 제외)
               if (newHP < oldHP) {
                 const damageAmount = oldHP - newHP;
                 hpDamagePercent = (damageAmount / maxHP) * 100;
               }
             }
             
+            // Row 업데이트 (lastHp는 여기서 업데이트됨)
             updateEnemyHUDRow(row, token);
             
-            // HP 감소 시 데미지 플래시 효과
+            // HP 감소 시에만 데미지 플래시 효과 적용
             if (hpDamagePercent > 0) {
               applyDamageFlash(row, hpDamagePercent, 'enemy');
             }
@@ -1569,9 +1571,9 @@ function buildEnemyHUDRow(token) {
   `;
   
   updateEnemyHUDRow(wrapper, token);
-  
-  // Small 버전 적용 조건: Troop 타입이면 small
-  const actorType = token.actor.system.actorType;
+
+  // Small 버전 적용 조건: Troop 타입이면 small (system.actorType 없으면 적용 안 함)
+  const actorType = token.actor.system?.actorType;
   const applySmall = (actorType === 'Troop');
   
   if (applySmall) {
@@ -1654,29 +1656,36 @@ function buildEnemyHUDRow(token) {
 // Enemy HUD Row 업데이트
 function updateEnemyHUDRow(wrapper, token) {
   const actor = token.actor;
-  const hp = actor.system.attributes.hp.value;
-  const maxHp = actor.system.attributes.hp.max;
-  const enc = actor.system.attributes.encroachment.value ?? 0;
-  
+  const hpVal = actor.system?.attributes?.hp;
+  const hp = hpVal?.value ?? 0;
+  const maxHp = hpVal?.max ?? 1;
+  const encVal = actor.system?.attributes?.encroachment?.value;
+  const encMissing = (encVal === undefined || encVal === null);
+  const enc = encMissing ? 300 : (Number(encVal) ?? 0); // 없으면 바만 300% 스타일, 값은 - 표시
+
   // HP 퍼센트 계산
-  const hpPct = Math.clamp(hp / maxHp, 0, 1) * 100;
+  const hpPct = maxHp > 0 ? Math.clamp(hp / maxHp, 0, 1) * 100 : 0;
   
   // 이전 침식률 값 가져오기 (순차 애니메이션용)
   // dataset에 저장된 값이 없으면 현재 DOM의 실제 값에서 역산
   let prevEnc = parseInt(wrapper.dataset.encroachment || '');
   if (isNaN(prevEnc)) {
-    // DOM에서 현재 침식률 값 역산
-    const fill1 = wrapper.querySelector(".enemy-bar-enc .enemy-enc-fill-1");
-    const fill2 = wrapper.querySelector(".enemy-bar-enc .enemy-enc-fill-2");
-    const fill3 = wrapper.querySelector(".enemy-bar-enc .enemy-enc-fill-3");
-    
-    if (fill1 && fill2 && fill3) {
-      const seg1Width = parseFloat(fill1.style.width) || 0;
-      const seg2Width = parseFloat(fill2.style.width) || 0;
-      const seg3Width = parseFloat(fill3.style.width) || 0;
-      prevEnc = Math.min(seg1Width, 100) + Math.min(seg2Width, 100) + Math.min(seg3Width, 100);
+    if (encMissing) {
+      prevEnc = 300;
     } else {
-      prevEnc = enc; // 요소가 없으면 현재 값과 같다고 가정
+      // DOM에서 현재 침식률 값 역산
+      const fill1 = wrapper.querySelector(".enemy-bar-enc .enemy-enc-fill-1");
+      const fill2 = wrapper.querySelector(".enemy-bar-enc .enemy-enc-fill-2");
+      const fill3 = wrapper.querySelector(".enemy-bar-enc .enemy-enc-fill-3");
+
+      if (fill1 && fill2 && fill3) {
+        const seg1Width = parseFloat(fill1.style.width) || 0;
+        const seg2Width = parseFloat(fill2.style.width) || 0;
+        const seg3Width = parseFloat(fill3.style.width) || 0;
+        prevEnc = Math.min(seg1Width, 100) + Math.min(seg2Width, 100) + Math.min(seg3Width, 100);
+      } else {
+        prevEnc = enc;
+      }
     }
   }
   
@@ -1811,11 +1820,15 @@ function updateEnemyHUDRow(wrapper, token) {
     }
   }
   
-  // 침식률 텍스트 업데이트 (GM만 표시)
+  // 침식률 텍스트 업데이트 (GM만 표시, 값 없으면 "-")
   const encTextElement = wrapper.querySelector(".enemy-bar-enc-text");
   if (encTextElement) {
     if (game.user.isGM) {
-      encTextElement.innerHTML = `<span class="editable-value" data-type="enc">${enc}</span>%`;
+      if (encMissing) {
+        encTextElement.innerHTML = '–'; // 값 없음
+      } else {
+        encTextElement.innerHTML = `<span class="editable-value" data-type="enc">${enc}</span>%`;
+      }
     } else {
       encTextElement.innerHTML = '';
     }
@@ -1911,7 +1924,7 @@ function updateEnemyHUDRow(wrapper, token) {
   // 상태이상 아이콘 표시
   const cond = wrapper.querySelector(".enemy-condition-container");
   cond.innerHTML = '';
-  actor.effects.filter(e => !e.disabled).forEach(e => {
+  (actor.effects || []).filter(e => !e.disabled).forEach(e => {
     const box = document.createElement('div');
     box.className = 'enemy-condition-icon-box';
     box.title = e.name;

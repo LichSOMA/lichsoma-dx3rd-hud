@@ -25,6 +25,7 @@ Hooks.on('createCombat', () => {
 Hooks.on('deleteCombat', () => {
   removeCombatTracker();
   removeAllTurnHighlights();
+  hidePlayerInactiveNotification();
 });
 
 // Combat 시작 시
@@ -1969,6 +1970,17 @@ function showPlayerInactiveNotification(userName, actorName) {
     `;
     document.head.appendChild(style);
   }
+  
+  // 현재 턴 액터의 카드에 attention-alert 클래스 추가
+  if (game.combat && game.combat.started) {
+    const currentCombatant = game.combat.combatant;
+    if (currentCombatant) {
+      const currentCard = combatTracker.querySelector(`.carousel-card[data-combatant-id="${currentCombatant.id}"]`);
+      if (currentCard) {
+        currentCard.classList.add('attention-alert');
+      }
+    }
+  }
 }
 
 /**
@@ -1978,6 +1990,15 @@ function hidePlayerInactiveNotification() {
   const notification = document.getElementById('dx3rd-player-inactive-notification');
   if (notification) {
     notification.remove();
+  }
+  
+  // 컴뱃 트랙커에서 attention-alert 클래스 제거
+  const combatTracker = document.getElementById('dx3rd-combat-tracker');
+  if (combatTracker) {
+    const alertCard = combatTracker.querySelector('.carousel-card.attention-alert');
+    if (alertCard) {
+      alertCard.classList.remove('attention-alert');
+    }
   }
 }
 
